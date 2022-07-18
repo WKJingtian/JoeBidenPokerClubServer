@@ -1,0 +1,15 @@
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\bin\Debug\net6.0\JoeBidenPokerClubServer.exe
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\bin\Debug\net6.0\JoeBidenPokerClubServer.deps.json
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\bin\Debug\net6.0\JoeBidenPokerClubServer.runtimeconfig.json
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\bin\Debug\net6.0\JoeBidenPokerClubServer.dll
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\bin\Debug\net6.0\JoeBidenPokerClubServer.pdb
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.csproj.AssemblyReference.cache
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.GeneratedMSBuildEditorConfig.editorconfig
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.AssemblyInfoInputs.cache
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.AssemblyInfo.cs
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.csproj.CoreCompileInputs.cache
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.dll
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\refint\JoeBidenPokerClubServer.dll
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.pdb
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\JoeBidenPokerClubServer.genruntimeconfig.cache
+D:\00_PROJECT\Practice\JoeBidenPokerClubServer\obj\Debug\net6.0\ref\JoeBidenPokerClubServer.dll

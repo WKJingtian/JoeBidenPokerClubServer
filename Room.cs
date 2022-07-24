@@ -13,6 +13,7 @@ namespace JoeBidenPokerClubServer
         List<Client> players;
         List<Client> obs;
         GameFlowManager manager;
+        float emptyTime = 0;
 
         public Room()
         {
@@ -28,19 +29,26 @@ namespace JoeBidenPokerClubServer
             else return players.Count < s_maxPlayerInRoom && manager.GetActivePlayerCount(false, false) < s_maxPlayerInRoom;
         }
 
-        public void OnPlayerEnterRoom(Client c)
+        public bool OnPlayerEnterRoom(Client c, int cashIn)
         {
-            if (c.playerAccountInfo != null)
+            bool result = false;
+            if (c.playerAccountInfo != null &&
+                !players.Contains(c))
             {
-
+                result = manager.AddPlayerToGame(c.playerAccountInfo.uid, cashIn);
+                if (result)
+                    players.Add(c);
             }
+            return result;
         }
 
         public void OnPlayerExitRoom(Client c)
         {
-            if (c.playerAccountInfo != null)
+            if (c.playerAccountInfo != null &&
+                players.Contains(c))
             {
-
+                manager.RemovePlayer(c.playerAccountInfo.uid);
+                players.Remove(c);
             }
         }
         public bool ifContains(int id)
@@ -66,16 +74,19 @@ namespace JoeBidenPokerClubServer
         public void Tick()
         {
             manager.Tick();
+            if (players.Count == 0)
+            {
+                emptyTime += App.s_msPerTick;
+                if (emptyTime > 30000)
+                    OnGameEnd();
+            }
+            else emptyTime = 0;
         }
 
         public void HandlePacket(Packet p, ClientPackets rpc)
         {
             switch (rpc)
             {
-                //case ClientPackets.joinRoom:
-                //    break;
-                //case ClientPackets.quitRoom:
-                //    break;
                 default:
                     manager.HandlePacket(p, rpc);
                     break;

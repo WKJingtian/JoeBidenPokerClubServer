@@ -18,6 +18,27 @@ namespace JoeBidenPokerClubServer
             }
             return null;
         }
+        static public Room GetFreeRoom()
+        {
+            foreach (var r in rooms)
+            {
+                if (r.Joinable())
+                    return r;
+            }
+            return new Room();
+        }
+        static public Room GetRoom(int roomIdx)
+        {
+            if (roomIdx >= 0 && roomIdx < rooms.Count &&
+                rooms[roomIdx] != null &&
+                rooms[roomIdx].Joinable())
+                return rooms[roomIdx];
+            return GetFreeRoom();
+        }
+        static public int GetRoomIdx(Room r)
+        {
+            return rooms.IndexOf(r);
+        }
 
         static public void RegisterGameRoom(Room r)
         {

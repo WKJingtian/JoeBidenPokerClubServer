@@ -50,7 +50,6 @@ namespace JoeBidenPokerClubServer
             deck = new List<PokerCard>();
             flopTurnRiver = new List<PokerCard>();
         }
-
         public int GetPlayerIndexById(int id)
         {
             for(int i = 0; i < players.Count; i++)
@@ -60,7 +59,6 @@ namespace JoeBidenPokerClubServer
             }
             return -1;
         }
-
         public int GetPlayerIdByIndex(int idx)
         {
             if (idx >= 0 && idx < players.Count &&
@@ -68,7 +66,15 @@ namespace JoeBidenPokerClubServer
                 return players[idx].uid;
             return -1;
         }
-
+        public PlayerInGameStat GetPlayerInfoById(int id)
+        {
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (players[i] != null && players[i].uid == id)
+                    return players[i];
+            }
+            return null;
+        }
         public int GetNextPlayerIdx(int fromIdx, bool ignoreFolded = true)
         {
             int result = -1;
@@ -92,7 +98,6 @@ namespace JoeBidenPokerClubServer
             }
             return -1;
         }
-
         public int GetActivePlayerCount(bool ignoreFolded = true, bool ignoreQuitted = true)
         {
             int result = 0;
@@ -105,7 +110,6 @@ namespace JoeBidenPokerClubServer
             }
             return result;
         }
-
         public bool AddPlayerToGame(int id, int buyIn)
         {
             bool added = false;
@@ -131,19 +135,15 @@ namespace JoeBidenPokerClubServer
             }
             return !added;
         }
-
         public void RemovePlayer(int id)
         {
-            foreach (var p in players)
+            var stat = GetPlayerInfoById(id);
+            if (stat != null)
             {
-                if (p.uid == id)
-                {
-                    p.hasQuited = true;
-                    p.hasFolded = true;
-                }
+                stat.hasQuited = true;
+                stat.hasFolded = true;
             }
         }
-
         public void Tick()
         {
             timer += (float)App.s_msPerTick / 1000.0f;
@@ -177,7 +177,6 @@ namespace JoeBidenPokerClubServer
                 }
             }
         }
-
         public int HighestBid()
         {
             int max = 0;
@@ -188,40 +187,29 @@ namespace JoeBidenPokerClubServer
             }
             return max;
         }
-
         public bool PlayerBid(int id, int amount)
         {
-            foreach (var player in players)
-            {
-                if (player.uid == id)
-                {
-                    player.ifAllIn = player.moneyInPoxket <= amount;
-                    player.moneyInPoxket -= amount;
-                    player.moneyInPot += amount;
-                    player.hasBidThisRound = true;
-                    return player.moneyInPot >= HighestBid();
-                }
-            }
-            return false;
+            var player = GetPlayerInfoById(id);
+            if (player == null) return false;
+            player.ifAllIn = player.moneyInPoxket <= amount;
+            int bidAmount = (int)MathF.Min(amount, player.moneyInPot);
+            player.moneyInPoxket -= bidAmount;
+            player.moneyInPot += bidAmount;
+            player.hasBidThisRound = true;
+            return player.ifAllIn || player.moneyInPot >= HighestBid();
         }
         public bool PlayerCheckOrFold(int id)
         {
-            foreach (var player in players)
+            var player = GetPlayerInfoById(id);
+            if (player == null) return false;
+            if (player.moneyInPot < HighestBid())
             {
-                if (player.uid == id)
-                {
-                    if (player.moneyInPot < HighestBid())
-                    {
-                        player.hasFolded = true;
-                        return false;
-                    }
-                    player.hasBidThisRound = true;
-                    return true;
-                }
+                player.hasFolded = true;
+                return false;
             }
-            return false;
+            player.hasBidThisRound = true;
+            return true;
         }
-
         public void StartNewRound()
         {
             deck.Clear();
@@ -274,7 +262,6 @@ namespace JoeBidenPokerClubServer
             curState = roundState.bidRound0;
             NewBidRound();
         }
-
         public void NewBidRound()
         {
             foreach (var p in players)
@@ -334,7 +321,6 @@ namespace JoeBidenPokerClubServer
 
             }
         }
-
         private bool IfBidRoundComplete()
         {
             foreach (var p in players)
@@ -345,7 +331,6 @@ namespace JoeBidenPokerClubServer
             }
             return true;
         }
-
         public void RoundEnd()
         {
             // calculate the result
@@ -353,9 +338,107 @@ namespace JoeBidenPokerClubServer
             timer = 0;
             currentActivePlayer = -1;
 
+            Dictionary<int, int[]> playerRooundScore = new Dictionary<int, int[]>();
+            Dictionary<int, List<PokerCard>> playerResultHand = new Dictionary<int, List<PokerCard>>();
+            foreach (var p in players)
+            {
+                if (p != null && !p.hasFolded &&
+                    !p.hasQuited && p.moneyInPot > 0)
+                {
+                    List<PokerCard> temp = new List<PokerCard>();
+                    List<PokerCard> resultHand = new List<PokerCard>();
+                    foreach (var c in p.hand)
+                        temp.Add(c);
+                    foreach (var c in flopTurnRiver)
+                        temp.Add(c);
+                    playerRooundScore[p.uid] = TellScore(temp, ref resultHand);
+                    playerResultHand[p.uid] = resultHand;
+                }
+                else ;//tell them they are losers! 
+            }
+            while (playerRooundScore.Count > 0)
+            {
+                var winnerScore = new int[] { -1, -1, -1, -1, -1, -1 };
+                List<int> winnerList = new List<int>();
+                foreach (var score in playerRooundScore)
+                {
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (winnerScore[i] < (score.Value)[i])
+                        {
+                            winnerScore = score.Value;
+                            break;
+                        }
+                        else if (winnerScore[i] > (score.Value)[i])
+                        {
+                            break;
+                        }
+                    }
+                }
 
+                foreach (var score in playerRooundScore)
+                {
+                    if (score.Value[0] == winnerScore[0] && score.Value[1] == winnerScore[1] &&
+                        score.Value[2] == winnerScore[2] && score.Value[3] == winnerScore[3] &&
+                        score.Value[4] == winnerScore[4] && score.Value[5] == winnerScore[5])
+                        winnerList.Add(score.Key);
+                }
+
+                foreach (int id in playerRooundScore.Keys)
+                {
+                    // send the message
+                    if (winnerList.Contains(id))
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
+                }
+
+                int winnerMaxBet = 0;
+                int winnerTotalBet = 0;
+                Dictionary<int, int> winnerBets = new Dictionary<int, int>();
+                foreach (int id in winnerList)
+                {
+                    PlayerInGameStat stat = GetPlayerInfoById(id);
+                    if (stat.moneyInPot > winnerMaxBet)
+                        winnerMaxBet = stat.moneyInPot;
+                    winnerBets[id] = stat.moneyInPot;
+                    winnerTotalBet += stat.moneyInPot;
+                }
+                int totalPoolMoney = 0;
+                foreach (var p in players)
+                {
+                    int moneyLose = (int)MathF.Min(winnerMaxBet, p.moneyInPot);
+                    p.moneyInPot -= moneyLose;
+                    totalPoolMoney += moneyLose;
+                }
+                foreach (int id in winnerList)
+                {
+                    PlayerInGameStat stat = GetPlayerInfoById(id);
+                    stat.moneyInPoxket += totalPoolMoney * winnerBets[id] / winnerTotalBet;
+                }
+                foreach (var p in players)
+                {
+                    if (p != null && playerRooundScore.ContainsKey(p.uid) &&
+                        p.moneyInPot == 0)
+                    {
+                        playerRooundScore.Remove(p.uid);
+                        playerResultHand.Remove(p.uid);
+                    }
+                }
+            }
+            foreach (var p in players)
+            {
+                if (p != null)
+                {
+                    p.moneyInPoxket += p.moneyInPot;
+                    p.moneyInPot = 0;
+                }
+            }
         }
-
         public void HandlePacket(Packet p, ClientPackets rpc)
         {
             int id;
@@ -364,13 +447,13 @@ namespace JoeBidenPokerClubServer
                 case ClientPackets.bid:
                     id = p.ReadInt();
                     int bid = p.ReadInt();
-                    if (id == GetNextPlayerIdx(currentActivePlayer))
+                    if (id != GetPlayerIdByIndex(currentActivePlayer))
                         break;
                     timer = 0;
-                    PlayerBid(id, bid);
-                    if (GetActivePlayerCount() <= 1)
+                    bool bidSuccess = PlayerBid(id, bid);
+                    if (!bidSuccess)
                     {
-                        RoundEnd();
+
                     }
                     else
                     {
@@ -387,7 +470,7 @@ namespace JoeBidenPokerClubServer
                     break;
                 case ClientPackets.fold:
                     id = p.ReadInt();
-                    if (id == GetNextPlayerIdx(currentActivePlayer))
+                    if (id != GetPlayerIdByIndex(currentActivePlayer))
                         break;
                     timer = 0;
                     PlayerCheckOrFold(id);
@@ -409,17 +492,295 @@ namespace JoeBidenPokerClubServer
                     }
                     break;
                 case ClientPackets.useTimeCard:
-                    if (p.ReadInt() == GetNextPlayerIdx(currentActivePlayer))
+                    if (p.ReadInt() == GetPlayerIdByIndex(currentActivePlayer))
                         timer -= roundTime;
                     break;
                 default:
                     break;
             }
         }
-
-        private int[] TellScore(List<PokerCard> cards)
+        private int[] TellScore(List<PokerCard> cards, ref List<PokerCard>  resultHand)
         {
-            return new int[] { 0, 0, 0, 0, 0, 0};
+            var result = new int[] { 0, 0, 0, 0, 0, 0 };
+            if (IsStraightFlash(cards, ref resultHand))
+                result[0] = 100;
+            else if (IsFlash(cards, ref resultHand))
+                result[0] = 50;
+            else if (IsStraight(cards, ref resultHand))
+                result[0] = 40;
+            else
+            {
+                BruteForceDoSort(cards, ref resultHand);
+                if (resultHand.Count < 5)
+                    throw new Exception("Tell Score: result hand size error");
+                if (resultHand[0].point == resultHand[1].point &&
+                    resultHand[0].point == resultHand[2].point &&
+                    resultHand[0].point == resultHand[3].point)
+                    result[0] = 90;
+                else if (resultHand[0].point == resultHand[1].point &&
+                    resultHand[0].point == resultHand[2].point &&
+                    resultHand[3].point == resultHand[4].point)
+                    result[0] = 80;
+                else if (resultHand[0].point == resultHand[1].point &&
+                    resultHand[0].point == resultHand[2].point)
+                    result[0] = 30;
+                else if (resultHand[0].point == resultHand[1].point &&
+                    resultHand[2].point == resultHand[3].point)
+                    result[0] = 20;
+                else if (resultHand[0].point == resultHand[1].point)
+                    result[0] = 10;
+                else
+                    result[0] = 0;
+            }
+            for (int i = 0; i < resultHand.Count; i++)
+            {
+                if (i > 5)
+                    throw new Exception("Tell Score: out of index");
+                if (resultHand[i].point == 1)
+                    result[i + 1] = 100;
+                else
+                    result[i + 1] = resultHand[i].point;
+            }
+            return result;
+        }
+        private bool IsStraight(List<PokerCard> cards, ref List<PokerCard> finalHand)
+        {
+            bool result = false;
+            PokerCard max = null;
+            foreach (var c in cards)
+            {
+                if (c.point == 1 &&
+                    HasPoint(cards, 13) > 0 &&
+                    HasPoint(cards, 12) > 0 &&
+                    HasPoint(cards, 11) > 0 &&
+                    HasPoint(cards, 10) > 0)
+                {
+                    if (max == null || max < c)
+                    {
+                        max = c;
+                        finalHand.Clear();
+                        finalHand.Add(c);
+                        finalHand.Add(GetPoint(cards, 13));
+                        finalHand.Add(GetPoint(cards, 12));
+                        finalHand.Add(GetPoint(cards, 11));
+                        finalHand.Add(GetPoint(cards, 10));
+                    }
+                    result = true;
+                }
+                else if (HasPoint(cards, c.point + 1) > 0 &&
+                    HasPoint(cards, c.point + 2) > 0 &&
+                    HasPoint(cards, c.point + 3) > 0 &&
+                    HasPoint(cards, c.point + 4) > 0)
+                {
+                    if (max == null || max < c)
+                    {
+                        max = c;
+                        finalHand.Clear();
+                        if (c.point == 1) finalHand.Add(c);
+                        finalHand.Add(GetPoint(cards, c.point + 4));
+                        finalHand.Add(GetPoint(cards, c.point + 3));
+                        finalHand.Add(GetPoint(cards, c.point + 2));
+                        finalHand.Add(GetPoint(cards, c.point + 1));
+                        if (c.point != 1) finalHand.Add(c);
+                    }
+                    result = true;
+                }
+            }
+            return result;
+        }
+        private bool IsStraightFlash(List<PokerCard> cards, ref List<PokerCard> finalHand)
+        {
+            bool result = false;
+            PokerCard max = null;
+            foreach (var c in cards)
+            {
+                if (c.point == 1 &&
+                    HasPointDecor(cards, 13, c.decor) > 0 &&
+                    HasPointDecor(cards, 12, c.decor) > 0 &&
+                    HasPointDecor(cards, 11, c.decor) > 0 &&
+                    HasPointDecor(cards, 10, c.decor) > 0)
+                {
+                    if (max == null || max < c)
+                    {
+                        max = c;
+                        finalHand.Clear();
+                        finalHand.Add(c);
+                        finalHand.Add(GetPointDecor(cards, 13, c.decor));
+                        finalHand.Add(GetPointDecor(cards, 12, c.decor));
+                        finalHand.Add(GetPointDecor(cards, 11, c.decor));
+                        finalHand.Add(GetPointDecor(cards, 10, c.decor));
+                    }
+                    result = true;
+                }
+                else if (HasPointDecor(cards, c.point + 1, c.decor) > 0 &&
+                    HasPointDecor(cards, c.point + 2, c.decor) > 0 &&
+                    HasPointDecor(cards, c.point + 3, c.decor) > 0 &&
+                    HasPointDecor(cards, c.point + 4, c.decor) > 0)
+                {
+                    if (max == null || max < c)
+                    {
+                        max = c;
+                        finalHand.Clear();
+                        if (c.point == 1) finalHand.Add(c);
+                        finalHand.Add(GetPointDecor(cards, c.point + 4, c.decor));
+                        finalHand.Add(GetPointDecor(cards, c.point + 3, c.decor));
+                        finalHand.Add(GetPointDecor(cards, c.point + 2, c.decor));
+                        finalHand.Add(GetPointDecor(cards, c.point + 1, c.decor));
+                        if (c.point != 1) finalHand.Add(c);
+                    }
+                    result = true;
+                }
+            }
+            return result;
+        }
+        private bool IsFlash(List<PokerCard> cards, ref List<PokerCard> finalHand)
+        {
+            bool result = false;
+            foreach (var c in cards)
+            {
+                if (HasDecor(cards, c.decor) > 4)
+                {
+                    finalHand.Clear();
+                    if (GetPointDecor(cards, 1, c.decor) != null)
+                        finalHand.Add(GetPointDecor(cards, 1, c.decor));
+                    int p = 13;
+                    while (finalHand.Count < 5 && p >= 0)
+                    {
+                        if (GetPointDecor(cards, p, c.decor) != null)
+                            finalHand.Add(GetPointDecor(cards, 1, c.decor));
+                        p--;
+                    }
+                    result = true;
+                }
+            }
+            return result;
+        }
+        private void BruteForceDoSort(List<PokerCard> cards, ref List<PokerCard> finalHand)
+        {
+            int lookingFor = 5 - finalHand.Count;
+            PokerCard temp = null;
+            for (int ii = lookingFor; ii > 0; ii++)
+            {
+                if (HasPoint(cards, 1) == ii)
+                {
+                    temp = GetPointDecor(cards, 1, PokerCard.Decors.heart);
+                    if (temp != null)
+                    {
+                        cards.Remove(temp);
+                        finalHand.Add(temp);
+                        if (finalHand.Count == 5) return;
+                    }
+                    temp = GetPointDecor(cards, 1, PokerCard.Decors.spade);
+                    if (temp != null)
+                    {
+                        cards.Remove(temp);
+                        finalHand.Add(temp);
+                        if (finalHand.Count == 5) return;
+                    }
+                    temp = GetPointDecor(cards, 1, PokerCard.Decors.diamond);
+                    if (temp != null)
+                    {
+                        cards.Remove(temp);
+                        finalHand.Add(temp);
+                        if (finalHand.Count == 5) return;
+                    }
+                    temp = GetPointDecor(cards, 1, PokerCard.Decors.club);
+                    if (temp != null)
+                    {
+                        cards.Remove(temp);
+                        finalHand.Add(temp);
+                        if (finalHand.Count == 5) return;
+                    }
+                    BruteForceDoSort(cards, ref finalHand);
+                    return;
+                }
+                for (int i = 13; i > 1; i++)
+                {
+                    if (HasPoint(cards, i) == ii)
+                    {
+                        temp = GetPointDecor(cards, i, PokerCard.Decors.heart);
+                        if (temp != null)
+                        {
+                            cards.Remove(temp);
+                            finalHand.Add(temp);
+                            if (finalHand.Count == 5) return;
+                        }
+                        temp = GetPointDecor(cards, i, PokerCard.Decors.spade);
+                        if (temp != null)
+                        {
+                            cards.Remove(temp);
+                            finalHand.Add(temp);
+                            if (finalHand.Count == 5) return;
+                        }
+                        temp = GetPointDecor(cards, i, PokerCard.Decors.diamond);
+                        if (temp != null)
+                        {
+                            cards.Remove(temp);
+                            finalHand.Add(temp);
+                            if (finalHand.Count == 5) return;
+                        }
+                        temp = GetPointDecor(cards, i, PokerCard.Decors.club);
+                        if (temp != null)
+                        {
+                            cards.Remove(temp);
+                            finalHand.Add(temp);
+                            if (finalHand.Count == 5) return;
+                        }
+                        BruteForceDoSort(cards, ref finalHand);
+                        return;
+                    }
+                }
+            }
+        }
+        private int HasPoint(List<PokerCard> cards, int targetP)
+        {
+            int result = 0;
+            foreach(var c in cards)
+            {
+                if (c.point == targetP)
+                    result++;
+            }
+            return result;
+        }
+        private int HasDecor(List<PokerCard> cards, PokerCard.Decors targetD)
+        {
+            int result = 0;
+            foreach (var c in cards)
+            {
+                if (c.decor == targetD)
+                    result++;
+            }
+            return result;
+        }
+        private int HasPointDecor(List<PokerCard> cards, int targetP, PokerCard.Decors targetD)
+        {
+            int result = 0;
+            foreach (var c in cards)
+            {
+                if (c.decor == targetD &&
+                    c.point == targetP)
+                    result++;
+            }
+            return result;
+        }
+        private PokerCard GetPoint(List<PokerCard> cards, int targetP)
+        {
+            foreach (var c in cards)
+            {
+                if (c.point == targetP)
+                    return c;
+            }
+            return null;
+        }
+        private PokerCard GetPointDecor(List<PokerCard> cards, int targetP, PokerCard.Decors targetD)
+        {
+            foreach (var c in cards)
+            {
+                if (c.decor == targetD &&
+                    c.point == targetP)
+                    return c;
+            }
+            return null;
         }
     }
 }

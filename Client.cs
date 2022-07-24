@@ -28,6 +28,12 @@ namespace JoeBidenPokerClubServer
             clientMessageHandlerMap[ClientPackets.welcomeReceived] = ClientRpc_welcomeReceived;
             clientMessageHandlerMap[ClientPackets.login] = ClientRpc_login;
             clientMessageHandlerMap[ClientPackets.register] = ClientRpc_register;
+            clientMessageHandlerMap[ClientPackets.joinRoom] = ClientRpc_joinRoom;
+            clientMessageHandlerMap[ClientPackets.createRoom] = ClientRpc_createRoom;
+            clientMessageHandlerMap[ClientPackets.bid] = ClientRpc_bid;
+            clientMessageHandlerMap[ClientPackets.fold] = ClientRpc_fold;
+            clientMessageHandlerMap[ClientPackets.useTimeCard] = ClientRpc_useTimeCard;
+            clientMessageHandlerMap[ClientPackets.quitRoom] = ClientRpc_quitRoom;
         }
         public void Connect(TcpClient tc)
         {
@@ -53,7 +59,6 @@ namespace JoeBidenPokerClubServer
             socket = null;
             playerAccountInfo = null;
         }
-
         private void ReceiveCallback(IAsyncResult result)
         {
             try
@@ -74,7 +79,6 @@ namespace JoeBidenPokerClubServer
                 Console.WriteLine(e.Message);
             }
         }
-
         bool HandlePacket(byte[] data)
         {
             int l = 0;
@@ -103,7 +107,6 @@ namespace JoeBidenPokerClubServer
             }
             return l <= 1;
         }
-
         public void Send(Packet p, AsyncCallback? toRead = null)
         {
             try
@@ -180,6 +183,204 @@ namespace JoeBidenPokerClubServer
                         p.Write(false);
                         p.Write(0);
                     }
+                });
+            });
+        }
+        private void ClientRpc_joinRoom(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to join room without an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.joinRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) != null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} has already joined a room {RoomManager.GetRoomIdx(RoomManager.GetPlayerRoom(playerAccountInfo.uid))}");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.joinRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                int toJoin = p.ReadInt();
+                int cashIn = p.ReadInt();
+                bool joinSuccess = false;
+                if (toJoin == -1)
+                    joinSuccess = RoomManager.GetFreeRoom().OnPlayerEnterRoom(this, cashIn);
+                else
+                    joinSuccess = RoomManager.GetRoom(toJoin).OnPlayerEnterRoom(this, cashIn);
+
+                ServerSend.RpcSend(ServerPackets.joinRoomCallback, id, (Packet returnP) =>
+                {
+                    returnP.Write(joinSuccess);
+                    if (joinSuccess)
+                        returnP.Write(RoomManager.GetRoomIdx(RoomManager.GetPlayerRoom(playerAccountInfo.uid)));
+                });
+            });
+        }
+        private void ClientRpc_createRoom(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to create room without an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.createRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) != null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} has already joined a room {RoomManager.GetRoomIdx(RoomManager.GetPlayerRoom(playerAccountInfo.uid))}");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.createRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                Room r = new Room();
+
+                ServerSend.RpcSend(ServerPackets.createRoomCallback, id, (Packet returnP) =>
+                {
+                    returnP.Write(RoomManager.GetRoomIdx(r) != -1);
+                    if (RoomManager.GetRoomIdx(r) != -1)
+                        returnP.Write(RoomManager.GetRoomIdx(r));
+                });
+            });
+        }
+        private void ClientRpc_bid(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to bid without an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.bidCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) == null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} is trying to bid outside a room");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.bidCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                RoomManager.GetPlayerRoom(playerAccountInfo.uid).HandlePacket(p, ClientPackets.bid);
+            });
+        }
+        private void ClientRpc_fold(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to bfoldwithout an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.foldCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) == null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} is trying to fold outside a room");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.foldCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                RoomManager.GetPlayerRoom(playerAccountInfo.uid).HandlePacket(p, ClientPackets.fold);
+            });
+        }
+        private void ClientRpc_useTimeCard(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to use time card without an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.useTimeCardCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) == null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} is trying to use time card outside a room");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.useTimeCardCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                RoomManager.GetPlayerRoom(playerAccountInfo.uid).HandlePacket(p, ClientPackets.useTimeCard);
+            });
+        }
+        private void ClientRpc_quitRoom(Packet p)
+        {
+            if (playerAccountInfo == null)
+            {
+                Console.WriteLine($"user trying to quit room without an account");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.quitRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            if (RoomManager.GetPlayerRoom(playerAccountInfo.uid) == null)
+            {
+                Console.WriteLine($"player {playerAccountInfo.uid} is trying to quit room outside a room");
+                ThreadManager.ExecuteOnMainThread(() => {
+                    ServerSend.RpcSend(ServerPackets.quitRoomCallback, id, (Packet returnP) =>
+                    {
+                        returnP.Write(false);
+                    });
+                });
+                return;
+            }
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                RoomManager.GetPlayerRoom(playerAccountInfo.uid).OnPlayerExitRoom(this);
+                ServerSend.RpcSend(ServerPackets.quitRoomCallback, id, (Packet returnP) =>
+                {
+                    returnP.Write(true);
                 });
             });
         }

@@ -145,7 +145,7 @@ namespace JoeBidenPokerClubServer
             {
                 if (playerAccountInfo != null)
                 {
-                    // cannot login twice
+                    Console.WriteLine($"client {id} trying to log in twice");
                     returnP.Write(false);
                     return;
                 }
@@ -154,13 +154,14 @@ namespace JoeBidenPokerClubServer
                 if (AccountManager.Inst.Login(clientUid, password))
                 {
                     playerAccountInfo = AccountManager.Inst.GetAccount(clientUid);
+                    Console.WriteLine($"{clientUid} log in success");
                     returnP.Write(true);
                     returnP.Write(clientUid);
                 }
                 else
                 {
+                    Console.WriteLine($"{clientUid} log in fail");
                     returnP.Write(false);
-                    returnP.Write(0);
                 }
             });
         }
@@ -215,7 +216,9 @@ namespace JoeBidenPokerClubServer
                 int toJoin = p.ReadInt();
                 int cashIn = p.ReadInt();
                 bool joinSuccess = false;
-                if (toJoin == -1)
+                if (cashIn > playerAccountInfo.cash)
+                    joinSuccess = false;
+                else if (toJoin == -1)
                     joinSuccess = RoomManager.GetFreeRoom().OnPlayerEnterRoom(this, cashIn);
                 else
                     joinSuccess = RoomManager.GetRoom(toJoin).OnPlayerEnterRoom(this, cashIn);

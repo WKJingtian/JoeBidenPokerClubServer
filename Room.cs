@@ -37,7 +37,10 @@ namespace JoeBidenPokerClubServer
             {
                 result = manager.AddPlayerToGame(c.playerAccountInfo.uid, cashIn);
                 if (result)
+                {
                     players.Add(c);
+                    c.playerAccountInfo.cash -= cashIn;
+                }
             }
             return result;
         }

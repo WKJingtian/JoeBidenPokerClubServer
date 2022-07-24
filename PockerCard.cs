@@ -22,24 +22,12 @@ namespace JoeBidenPokerClubServer
         public Decors decor;
         public int point;
 
-        public PokerCard(Decors d, int p)
+        public PokerCard(Decors d = Decors.heart, int p = 0)
         {
             if (p < 0 || p > 13)
                 throw new Exception("Wrong Poker Point");
             decor = d;
             point = p;
-        }
-
-        static public void WritePokerInfoToPacket(PokerCard pc, ref Packet pa)
-        {
-            if (pc.notRevealed)
-                pa.Write(pc.notRevealed);
-            else
-            {
-                pa.Write(pc.notRevealed);
-                pa.Write((int)pc.decor);
-                pa.Write(pc.point);
-            }
         }
         static public bool operator <(PokerCard a, PokerCard b)
         {
@@ -61,7 +49,6 @@ namespace JoeBidenPokerClubServer
             else
                 return a.point < b.point;
         }
-
         static public bool operator>(PokerCard a, PokerCard b)
         {
             if (a.point == b.point &&
@@ -96,6 +83,17 @@ namespace JoeBidenPokerClubServer
                 (a != null && b != null &&
                 (a.point != b.point ||
                 a.decor != b.decor));
+        }
+        static public void WriteSelfToAPacket(PokerCard c, ref Packet p)
+        {
+            if (c.notRevealed)
+                p.Write(false);
+            else
+            {
+                p.Write(true);
+                p.Write((int)c.decor);
+                p.Write(c.point);
+            }
         }
     }
 }

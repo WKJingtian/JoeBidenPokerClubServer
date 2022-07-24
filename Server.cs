@@ -20,7 +20,6 @@ namespace JoeBidenPokerClubServer
             tcpListener.BeginAcceptTcpClient(new AsyncCallback(TcpConnectCallback), null);
             Console.WriteLine($"Server Started on port {port}");
         }
-
         private static void TcpConnectCallback(IAsyncResult result)
         {
             if (tcpListener == null)
@@ -48,13 +47,30 @@ namespace JoeBidenPokerClubServer
             tcpListener.BeginAcceptTcpClient(new AsyncCallback(TcpConnectCallback), null);
 
         }
-
         private static void InitServerData()
         {
             for (int i = 1; i < maxPlayer; i++)
             {
                 clients[i] = new Client(i);
             }
+        }
+        public static Client GetClientByUid(int uid)
+        {
+            foreach (var c in clients)
+            {
+                if (c.Value.playerAccountInfo != null && c.Value.playerAccountInfo.uid == uid)
+                    return c.Value;
+            }
+            return null;
+        }
+        public static int GetClientRankByUid(int uid)
+        {
+            foreach (var c in clients)
+            {
+                if (c.Value.playerAccountInfo != null && c.Value.playerAccountInfo.uid == uid)
+                    return c.Key;
+            }
+            return -1;
         }
     }
 }

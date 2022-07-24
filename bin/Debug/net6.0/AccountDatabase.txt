@@ -1,1 +1,3 @@
-WKR 1QAZ2wsx null null 64441606 0 0 0 0 0
+WKR 1QAZ2wsx null null 64441606 999999 0 0 0 0
+wkr00 123 null null 92899171 999999 0 0 0 0
+wkr01 123 null null 65970676 999999 0 0 0 0

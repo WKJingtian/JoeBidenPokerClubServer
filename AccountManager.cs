@@ -97,7 +97,6 @@ namespace JoeBidenPokerClubServer
             foreach (var account in accountInfo)
                 ifOnline[account.Key] = false;
         }
-
         private int GenerateNewUid()
         {
             int result = randomizer.Next(minUid, maxUid);
@@ -107,7 +106,6 @@ namespace JoeBidenPokerClubServer
             }
             return result;
         }
-
         public int Register(string name, string password, string email = "null", string signiture = "null")
         {
             int newUid = GenerateNewUid();
@@ -212,7 +210,6 @@ namespace JoeBidenPokerClubServer
         {
             ifOnline[uid] = false;
         }
-
         public AccountInfo GetAccount(int uid)
         {
             return accountInfo.ContainsKey(uid) ? accountInfo[uid] : null;

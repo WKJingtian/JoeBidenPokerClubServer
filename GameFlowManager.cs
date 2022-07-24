@@ -27,7 +27,7 @@ namespace JoeBidenPokerClubServer
         private int smallBlindMoneyNum = 1;
         private int currentActivePlayer = 0;
         private int currentSmallBlind = 0;
-        private bool gamePaused = false;
+        private bool gamePaused = true;
 
         public enum roundState
         {

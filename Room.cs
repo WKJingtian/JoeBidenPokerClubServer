@@ -19,7 +19,6 @@ namespace JoeBidenPokerClubServer
         {
             players = new List<Client>();
             obs = new List<Client>();
-            RoomManager.RegisterGameRoom(this);
             OnGameStart();
         }
 
@@ -66,6 +65,7 @@ namespace JoeBidenPokerClubServer
 
         public void OnGameStart()
         {
+            RoomManager.RegisterGameRoom(this);
             manager = new GameFlowManager(s_maxPlayerInRoom);
         }
 
@@ -73,6 +73,8 @@ namespace JoeBidenPokerClubServer
         {
             manager.ForceEnd();
             players.Clear();
+            AccountManager.Inst.ReRecordAll();
+            RoomManager.UnregisterGameRoom(this);
         }
 
         public void Tick()

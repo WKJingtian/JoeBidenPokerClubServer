@@ -9,6 +9,8 @@ namespace JoeBidenPokerClubServer
     class RoomManager
     {
         static List<Room> rooms = new List<Room>();
+        static List<Room> toRemove = new List<Room>();
+        static List<Room> toAdd = new List<Room>();
         static public Room GetPlayerRoom(int id)
         {
             foreach (var r in rooms)
@@ -42,11 +44,21 @@ namespace JoeBidenPokerClubServer
 
         static public void RegisterGameRoom(Room r)
         {
-            rooms.Add(r);
+            toAdd.Add(r);
+        }
+        static public void UnregisterGameRoom(Room r)
+        {
+            toRemove.Add(r);
         }
 
         static public void Update()
         {
+            foreach (var r in toAdd)
+                rooms.Add(r);
+            foreach (var r in toRemove)
+                rooms.Remove(r);
+            toAdd.Clear();
+            toRemove.Clear();
             foreach (Room room in rooms)
                 room.Tick();
         }

@@ -166,52 +166,19 @@ namespace JoeBidenPokerClubServer
             Console.WriteLine($"Caanot find email {email}'s account");
             return "";
         }
-        public void ReRecordAccountInfo(int uid)
+        public void ReRecordAll()
         {
             ThreadManager.ExecuteOnMainThread(() =>
             {
                 string tempFile = Path.GetTempFileName();
-                using (var sr = new StreamReader(pathToAccountFile))
                 using (var sw = new StreamWriter(tempFile))
                 {
-                    string line = sr.ReadLine();
-                    while (line != null)
-                    {
-                        string[] infoSegs = line.Split(' ');
-                        if (infoSegs.Length != 10)
-                        {
-                            line = sr.ReadLine();
-                            continue;
-                        }
-                        try
-                        {
-                            int readUid = Int32.Parse(infoSegs[4]);
-                            if (readUid == uid)
-                            {
-                                var info = accountInfo[uid];
-                                sw.WriteLine($"{info.name} {info.password} {info.email} {info.signiture} {info.uid} {info.cash} {info.gameWin} {info.gameLose} {info.cashWin} {info.cashLose}");
-                            }
-                            else sw.WriteLine(line);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            line = sr.ReadLine();
-                            continue;
-                        }
-                        line = sr.ReadLine();
-                    }
-                    File.Delete(pathToAccountFile);
+                    foreach (var info in accountInfo.Values)
+                        sw.WriteLine($"{info.name} {info.password} {info.email} {info.signiture} {info.uid} {info.cash} {info.gameWin} {info.gameLose} {info.cashWin} {info.cashLose}");
                     File.Move(tempFile, pathToAccountFile);
+                    sw.Close();
                 }
             });
-        }
-        public void ReRecordAll()
-        {
-            foreach (var a in accountInfo)
-            {
-                ReRecordAccountInfo(a.Key);
-            }
         }
         public void Disconnect(int uid)
         {

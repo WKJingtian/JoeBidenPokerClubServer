@@ -19,8 +19,8 @@ namespace JoeBidenPokerClubServer
         {
             players = new List<Client>();
             obs = new List<Client>();
-            manager = new GameFlowManager(s_maxPlayerInRoom);
             RoomManager.RegisterGameRoom(this);
+            OnGameStart();
         }
 
         public bool Joinable(bool isOb = false)
@@ -58,7 +58,7 @@ namespace JoeBidenPokerClubServer
         {
             foreach (Client c in players)
             {
-                if (c.id == id)
+                if (c.playerAccountInfo.uid == id)
                     return true;
             }
             return false;
@@ -71,7 +71,8 @@ namespace JoeBidenPokerClubServer
 
         public void OnGameEnd()
         {
-
+            manager.ForceEnd();
+            players.Clear();
         }
 
         public void Tick()

@@ -69,14 +69,14 @@ namespace JoeBidenPokerClubServer
             else
                 return a.point > b.point;
         }
-        static public bool operator ==(PokerCard a, PokerCard b)
+        static public bool Equal(PokerCard a, PokerCard b)
         {
             return (a == null && b == null) ||
                 (a != null && b != null &&
                 a.point == b.point &&
                 a.decor == b.decor);
         }
-        static public bool operator !=(PokerCard a, PokerCard b)
+        static public bool NotEqual(PokerCard a, PokerCard b)
         {
             return (a == null && b != null) ||
                 (a != null && b == null) ||

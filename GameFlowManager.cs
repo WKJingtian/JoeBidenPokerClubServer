@@ -89,8 +89,11 @@ namespace JoeBidenPokerClubServer
         {
             foreach (var p in players)
             {
-                if (!p.hasFolded && !p.hasBidThisRound &&
-                    !p.ifAllIn && p.moneyInPot != HighestBid())
+                if (p != null)
+                    Console.WriteLine($"checking {p.uid} stat: {p.hasFolded} - {p.hasBidThisRound} - {p.ifAllIn} - {p.moneyInPot} - {HighestBid()}");
+                if (p != null &&
+                    !p.hasFolded && !p.ifAllIn &&
+                    (!p.hasBidThisRound || p.moneyInPot != HighestBid()))
                     return false;
             }
             return true;
@@ -154,7 +157,7 @@ namespace JoeBidenPokerClubServer
                 added = true;
             }
             SyncPlayers();
-            return !added;
+            return added;
         }
         public void RemovePlayer(int id)
         {
@@ -171,28 +174,39 @@ namespace JoeBidenPokerClubServer
             timer += (float)App.s_msPerTick / 1000.0f;
             if (gamePaused)
             {
+                bool playerNeedsUpdate = false;
                 for (int idx = players.Count - 1; idx >= 0; idx--)
                 {
                     if (players[idx] != null && players[idx].hasQuited)
                     {
-                        AccountManager.Inst.GetAccount(players[idx].uid).cash += players[idx].moneyInPocket;
+                        AccountManager.Inst.accountInfo[players[idx].uid].cash += players[idx].moneyInPocket;
                         players[idx] = null;
+                        playerNeedsUpdate = true;
                     }
                 }
-                SyncPlayers();
+                if (playerNeedsUpdate) SyncPlayers();
+                if (timer > pauseBetweenRounds &&
+                    GetActivePlayerCount(false) > 1)
+                {
+                    gamePaused = false;
+                    StartNewRound();
+                    return;
+                }
             }
-            if (gamePaused && timer > pauseBetweenRounds && 
-                GetActivePlayerCount(false) > 1)
-            {
-                gamePaused = false;
-                StartNewRound();
-                return;
-            }
-
-            if (timer > roundTime)
+            else if (timer > roundTime)
             {
                 timer = 0;
-                PlayerCheckOrFold(players[currentActivePlayer].uid);
+                if (currentActivePlayer < 0 ||
+                    currentActivePlayer >= players.Count ||
+                    players[currentActivePlayer] == null)
+                {
+                    Console.WriteLine($"GAME ERROR: {currentActivePlayer} is not a valid player rank");
+                }
+                Console.Write($"Force player {currentActivePlayer} to act:    ");
+                if (PlayerCheckOrFold(players[currentActivePlayer].uid))
+                    Console.WriteLine("check");
+                else
+                    Console.WriteLine("fold");
                 if (GetActivePlayerCount() <= 1)
                 {
                     RoundEnd();
@@ -201,10 +215,12 @@ namespace JoeBidenPokerClubServer
                 {
                     if (IfBidRoundComplete())
                     {
+                        Console.WriteLine("advance to a new round");
                         NewBidRound();
                     }
                     else
                     {
+                        Console.WriteLine("asking next player to act");
                         currentActivePlayer = GetNextPlayerIdx(currentActivePlayer);
                         RequestAction(players[currentActivePlayer].uid);
                     }
@@ -216,7 +232,7 @@ namespace JoeBidenPokerClubServer
             var player = GetPlayerInfoById(id);
             if (player == null) return false;
             player.ifAllIn = player.moneyInPocket <= amount;
-            int bidAmount = (int)MathF.Min(amount, player.moneyInPot);
+            int bidAmount = (int)MathF.Min(amount, player.moneyInPocket);
             player.moneyInPocket -= bidAmount;
             player.moneyInPot += bidAmount;
             player.hasBidThisRound = true;
@@ -236,6 +252,7 @@ namespace JoeBidenPokerClubServer
         }
         public void StartNewRound()
         {
+            Console.WriteLine("new game round started");
             deck.Clear();
             flopTurnRiver.Clear();
             roundNum++;
@@ -245,7 +262,11 @@ namespace JoeBidenPokerClubServer
                 // sync room stat
                 return;
             }
-            else { /* sync room stat */ }
+            else
+            {
+                SyncPlayers();
+                SyncStat();
+            }
             foreach (var player in players)
             {
                 player.hand.Clear();
@@ -292,16 +313,22 @@ namespace JoeBidenPokerClubServer
             switch (curState)
             {
                 case roundState.bidRound0:
-                    PlayerBid(GetPlayerIdByIndex(currentSmallBlind), smallBlindMoneyNum);
-                    PlayerBid(GetPlayerIdByIndex(GetNextPlayerIdx(currentSmallBlind)),
-                        2 * smallBlindMoneyNum);
+                    Console.WriteLine("round 0");
+                    if (!PlayerBid(GetPlayerIdByIndex(currentSmallBlind), smallBlindMoneyNum))
+                        Console.WriteLine("small blind fail to place a bid");
+                    if (!PlayerBid(GetPlayerIdByIndex(GetNextPlayerIdx(currentSmallBlind)),
+                        2 * smallBlindMoneyNum))
+                        Console.WriteLine("big blind fail to place a bid");
                     currentActivePlayer = GetNextPlayerIdx(GetNextPlayerIdx(currentSmallBlind));
                     RequestAction(players[currentActivePlayer].uid);
                     SyncFlopTurnRiver();
+                    SyncPlayers();
+                    SyncStat();
                     curState = roundState.bidRound1;
                     break;
 
                 case roundState.bidRound1:
+                    Console.WriteLine("round 1");
                     randIdx = new Random().Next(0, deck.Count);
                     flopTurnRiver.Add(deck[randIdx]);
                     deck.RemoveAt(randIdx);
@@ -314,35 +341,45 @@ namespace JoeBidenPokerClubServer
                     currentActivePlayer = GetNextPlayerIdx(GetNextPlayerIdx(currentSmallBlind));
                     RequestAction(players[currentActivePlayer].uid);
                     SyncFlopTurnRiver();
+                    SyncPlayers();
+                    SyncStat();
                     curState = roundState.bidRound2;
                     break;
 
                 case roundState.bidRound2:
+                    Console.WriteLine("round 2");
                     randIdx = new Random().Next(0, deck.Count);
                     flopTurnRiver.Add(deck[randIdx]);
                     deck.RemoveAt(randIdx);
                     currentActivePlayer = GetNextPlayerIdx(GetNextPlayerIdx(currentSmallBlind));
                     RequestAction(players[currentActivePlayer].uid);
                     SyncFlopTurnRiver();
+                    SyncPlayers();
+                    SyncStat();
                     curState = roundState.bidRound3;
                     break;
 
                 case roundState.bidRound3:
+                    Console.WriteLine("round 3");
                     randIdx = new Random().Next(0, deck.Count);
                     flopTurnRiver.Add(deck[randIdx]);
                     deck.RemoveAt(randIdx);
                     currentActivePlayer = GetNextPlayerIdx(GetNextPlayerIdx(currentSmallBlind));
                     RequestAction(players[currentActivePlayer].uid);
                     SyncFlopTurnRiver();
+                    SyncPlayers();
+                    SyncStat();
                     curState = roundState.roundFinished;
                     break;
 
                 case roundState.roundFinished:
+                    Console.WriteLine("round final");
                     // divide the pool
                     RoundEnd();
                     break;
 
                 default:
+                    Console.WriteLine("round error");
                     break;
 
             }
@@ -350,6 +387,7 @@ namespace JoeBidenPokerClubServer
         public void RoundEnd()
         {
             // calculate the result
+            Console.WriteLine("GameRound end, now start to calculate result");
             gamePaused = true;
             timer = 0;
             currentActivePlayer = -1;
@@ -361,7 +399,6 @@ namespace JoeBidenPokerClubServer
                 if (p != null && !p.hasFolded &&
                     !p.hasQuited && p.moneyInPot > 0)
                 {
-                    SyncPlayersHand(p.uid, true);
                     List<PokerCard> temp = new List<PokerCard>();
                     List<PokerCard> resultHand = new List<PokerCard>();
                     foreach (var c in p.hand)
@@ -373,67 +410,87 @@ namespace JoeBidenPokerClubServer
                 }
                 else ;//tell them they are losers! 
             }
-            while (playerRooundScore.Count > 0)
+            if (playerRooundScore.Count == 1)
             {
-                var winnerScore = new int[] { -1, -1, -1, -1, -1, -1 };
-                List<int> winnerList = new List<int>();
-                foreach (var score in playerRooundScore)
+                var winnerInfo = GetPlayerInfoById(playerRooundScore.Keys.ToList<int>()[0]);
+                int winnerBid = winnerInfo.moneyInPot;
+                foreach (var p in players)
                 {
-                    for (int i = 0; i < 6; i++)
+                    if ( p != null && p.uid != winnerInfo.uid)
                     {
-                        if (winnerScore[i] < (score.Value)[i])
-                        {
-                            winnerScore = score.Value;
-                            break;
-                        }
-                        else if (winnerScore[i] > (score.Value)[i])
-                        {
-                            break;
-                        }
+                        int loseAmount = (int)MathF.Min(winnerBid, p.moneyInPot);
+                        p.moneyInPot -= loseAmount;
+                        winnerInfo.moneyInPot += loseAmount;
                     }
                 }
-
-                foreach (var score in playerRooundScore)
+            }
+            else
+            {
+                while (playerRooundScore.Count > 0)
                 {
-                    if (score.Value[0] == winnerScore[0] && score.Value[1] == winnerScore[1] &&
-                        score.Value[2] == winnerScore[2] && score.Value[3] == winnerScore[3] &&
-                        score.Value[4] == winnerScore[4] && score.Value[5] == winnerScore[5])
-                        winnerList.Add(score.Key);
-                }
-
-                foreach (int id in playerRooundScore.Keys)
-                    Congradulation(id, winnerList.Contains(id));
-
-                int winnerMaxBet = 0;
-                int winnerTotalBet = 0;
-                Dictionary<int, int> winnerBets = new Dictionary<int, int>();
-                foreach (int id in winnerList)
-                {
-                    PlayerInGameStat stat = GetPlayerInfoById(id);
-                    if (stat.moneyInPot > winnerMaxBet)
-                        winnerMaxBet = stat.moneyInPot;
-                    winnerBets[id] = stat.moneyInPot;
-                    winnerTotalBet += stat.moneyInPot;
-                }
-                int totalPoolMoney = 0;
-                foreach (var p in players)
-                {
-                    int moneyLose = (int)MathF.Min(winnerMaxBet, p.moneyInPot);
-                    p.moneyInPot -= moneyLose;
-                    totalPoolMoney += moneyLose;
-                }
-                foreach (int id in winnerList)
-                {
-                    PlayerInGameStat stat = GetPlayerInfoById(id);
-                    stat.moneyInPocket += totalPoolMoney * winnerBets[id] / winnerTotalBet;
-                }
-                foreach (var p in players)
-                {
-                    if (p != null && playerRooundScore.ContainsKey(p.uid) &&
-                        p.moneyInPot == 0)
+                    var winnerScore = new int[] { -1, -1, -1, -1, -1, -1 };
+                    List<int> winnerList = new List<int>();
+                    foreach (var score in playerRooundScore)
                     {
-                        playerRooundScore.Remove(p.uid);
-                        playerResultHand.Remove(p.uid);
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (winnerScore[i] < (score.Value)[i])
+                            {
+                                winnerScore = score.Value;
+                                break;
+                            }
+                            else if (winnerScore[i] > (score.Value)[i])
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    foreach (var score in playerRooundScore)
+                    {
+                        if (score.Value[0] == winnerScore[0] && score.Value[1] == winnerScore[1] &&
+                            score.Value[2] == winnerScore[2] && score.Value[3] == winnerScore[3] &&
+                            score.Value[4] == winnerScore[4] && score.Value[5] == winnerScore[5])
+                            winnerList.Add(score.Key);
+                    }
+
+                    foreach (int id in playerRooundScore.Keys)
+                    {
+                        SyncPlayersHand(id, true);
+                        Congradulation(id, winnerList.Contains(id));
+                    }
+
+                    int winnerMaxBet = 0;
+                    int winnerTotalBet = 0;
+                    Dictionary<int, int> winnerBets = new Dictionary<int, int>();
+                    foreach (int id in winnerList)
+                    {
+                        PlayerInGameStat stat = GetPlayerInfoById(id);
+                        if (stat.moneyInPot > winnerMaxBet)
+                            winnerMaxBet = stat.moneyInPot;
+                        winnerBets[id] = stat.moneyInPot;
+                        winnerTotalBet += stat.moneyInPot;
+                    }
+                    int totalPoolMoney = 0;
+                    foreach (var p in players)
+                    {
+                        int moneyLose = (int)MathF.Min(winnerMaxBet, p.moneyInPot);
+                        p.moneyInPot -= moneyLose;
+                        totalPoolMoney += moneyLose;
+                    }
+                    foreach (int id in winnerList)
+                    {
+                        PlayerInGameStat stat = GetPlayerInfoById(id);
+                        stat.moneyInPocket += totalPoolMoney * winnerBets[id] / winnerTotalBet;
+                    }
+                    foreach (var p in players)
+                    {
+                        if (p != null && playerRooundScore.ContainsKey(p.uid) &&
+                            p.moneyInPot == 0)
+                        {
+                            playerRooundScore.Remove(p.uid);
+                            playerResultHand.Remove(p.uid);
+                        }
                     }
                 }
             }
@@ -445,6 +502,7 @@ namespace JoeBidenPokerClubServer
                     p.moneyInPot = 0;
                 }
             }
+            Console.WriteLine("Result calculation finished");
             SyncPlayers();
         }
         public void HandlePacket(Packet p, ClientPackets rpc)
@@ -549,8 +607,8 @@ namespace JoeBidenPokerClubServer
             {
                 BruteForceDoSort(cards, ref resultHand);
                 if (resultHand.Count < 5)
-                    throw new Exception("Tell Score: result hand size error");
-                if (resultHand[0].point == resultHand[1].point &&
+                    result[0] = 0;
+                else if (resultHand[0].point == resultHand[1].point &&
                     resultHand[0].point == resultHand[2].point &&
                     resultHand[0].point == resultHand[3].point)
                     result[0] = 90;
@@ -696,7 +754,7 @@ namespace JoeBidenPokerClubServer
         {
             int lookingFor = 5 - finalHand.Count;
             PokerCard temp = null;
-            for (int ii = lookingFor; ii > 0; ii++)
+            for (int ii = lookingFor; ii > 0; ii--)
             {
                 if (HasPoint(cards, 1) == ii)
                 {
@@ -731,7 +789,7 @@ namespace JoeBidenPokerClubServer
                     BruteForceDoSort(cards, ref finalHand);
                     return;
                 }
-                for (int i = 13; i > 1; i++)
+                for (int i = 13; i > 1; i--)
                 {
                     if (HasPoint(cards, i) == ii)
                     {
@@ -956,6 +1014,23 @@ namespace JoeBidenPokerClubServer
                     p.Write(isWinner);
                 });
             });
+        }
+        public void ForceEnd()
+        {
+            gamePaused = true;
+            foreach (var p in players)
+            {
+                if (p != null && AccountManager.Inst.accountInfo.ContainsKey(p.uid))
+                {
+                    AccountManager.Inst.accountInfo[p.uid].cash += p.moneyInPocket;
+                    AccountManager.Inst.accountInfo[p.uid].cash += p.moneyInPot;
+                    p.moneyInPocket = 0;
+                    p.moneyInPot = 0;
+                }
+            }
+            players.Clear();
+            SyncPlayers();
+            SyncStat();
         }
     }
 }

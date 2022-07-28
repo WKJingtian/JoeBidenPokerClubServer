@@ -35,8 +35,8 @@ namespace JoeBidenPokerClubServer
             public int cashWin;
             public int cashLose;
         }
-        Dictionary<int, AccountInfo> accountInfo;
-        Dictionary<int, bool> ifOnline;
+        public Dictionary<int, AccountInfo> accountInfo;
+        public Dictionary<int, bool> ifOnline;
         protected AccountManager()
         {
             if (instance != null)
@@ -205,6 +205,13 @@ namespace JoeBidenPokerClubServer
                     File.Move(tempFile, pathToAccountFile);
                 }
             });
+        }
+        public void ReRecordAll()
+        {
+            foreach (var a in accountInfo)
+            {
+                ReRecordAccountInfo(a.Key);
+            }
         }
         public void Disconnect(int uid)
         {

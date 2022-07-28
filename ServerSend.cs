@@ -18,7 +18,9 @@ namespace JoeBidenPokerClubServer
                 Console.WriteLine($"RPC packet {(int)rpc} has exceeded the max length of a single packet");
                 return;
             }
-            Server.clients[clientId].Send(p, toRead);
+            if (clientId >= 0 && clientId < Server.clients.Count &
+                Server.clients[clientId] != null)
+                Server.clients[clientId].Send(p, toRead);
         }
         public static void RpcSendAll(ServerPackets rpc, Action<Packet> toWrite, AsyncCallback? toRead = null)
         {

@@ -50,5 +50,11 @@ namespace JoeBidenPokerClubServer
             foreach (Room room in rooms)
                 room.Tick();
         }
+
+        static public void ShutDownAllRoomNow()
+        {
+            foreach (Room room in rooms)
+                room.OnGameEnd();
+        }
     }
 }

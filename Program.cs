@@ -17,6 +17,12 @@ namespace JoeBidenPokerClubServer
             Thread main = new Thread(new ThreadStart(MainThread));
             main.Start();
         }
+        static public void OnQuit()
+        {
+            Console.WriteLine("Application quit, recording account info now...");
+            RoomManager.ShutDownAllRoomNow();
+            AccountManager.Inst.ReRecordAll();
+        }
 
         private static void MainThread()
         {

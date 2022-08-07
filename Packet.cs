@@ -24,6 +24,10 @@ namespace JoeBidenPokerClubServer
         syncPlayerHand,
         requestPlayerAction,
         congrateWinner,
+        dispatchChat,
+        sendAccountInfo,
+        sendRoomList,
+        observeRoomCallback,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -38,6 +42,10 @@ namespace JoeBidenPokerClubServer
         fold,
         useTimeCard,
         quitRoom,
+        sendChat,
+        requestAccountInfo,
+        requestRoomList,
+        observeRoom,
     }
 
     public class Packet : IDisposable

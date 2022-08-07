@@ -73,7 +73,6 @@ namespace JoeBidenPokerClubServer
         {
             manager.ForceEnd();
             players.Clear();
-            AccountManager.Inst.ReRecordAll();
             RoomManager.UnregisterGameRoom(this);
         }
 

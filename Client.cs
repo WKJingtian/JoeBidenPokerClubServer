@@ -34,6 +34,10 @@ namespace JoeBidenPokerClubServer
             clientMessageHandlerMap[ClientPackets.fold] = ClientRpc_fold;
             clientMessageHandlerMap[ClientPackets.useTimeCard] = ClientRpc_useTimeCard;
             clientMessageHandlerMap[ClientPackets.quitRoom] = ClientRpc_quitRoom;
+            clientMessageHandlerMap[ClientPackets.sendChat] = ClientRpc_sendChat;
+            clientMessageHandlerMap[ClientPackets.requestAccountInfo] = ClientRpc_requestAccountInfo;
+            clientMessageHandlerMap[ClientPackets.requestRoomList] = ClientRpc_requestRoomList;
+            clientMessageHandlerMap[ClientPackets.observeRoom] = ClientRpc_observeRoom;
         }
         public void Connect(TcpClient tc)
         {
@@ -386,6 +390,22 @@ namespace JoeBidenPokerClubServer
                     returnP.Write(true);
                 });
             });
+        }
+        private void ClientRpc_sendChat(Packet p)
+        {
+
+        }
+        private void ClientRpc_requestAccountInfo(Packet p)
+        {
+
+        }
+        private void ClientRpc_requestRoomList(Packet p)
+        {
+
+        }
+        private void ClientRpc_observeRoom(Packet p)
+        {
+
         }
         #endregion
     }

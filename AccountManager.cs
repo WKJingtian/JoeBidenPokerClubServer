@@ -19,6 +19,7 @@ namespace JoeBidenPokerClubServer
             }
         }
         private readonly static string pathToAccountFile = ".\\AccountDatabase.txt";
+        private readonly static string tempFile = ".\\temp.txt";
         private readonly static int minUid = 10000000;
         private readonly static int maxUid = 99999999;
         private Random randomizer;
@@ -170,13 +171,15 @@ namespace JoeBidenPokerClubServer
         {
             ThreadManager.ExecuteOnMainThread(() =>
             {
-                string tempFile = Path.GetTempFileName();
+
+                File.WriteAllText(tempFile, String.Empty);
                 using (var sw = new StreamWriter(tempFile))
                 {
                     foreach (var info in accountInfo.Values)
                         sw.WriteLine($"{info.name} {info.password} {info.email} {info.signiture} {info.uid} {info.cash} {info.gameWin} {info.gameLose} {info.cashWin} {info.cashLose}");
-                    File.Move(tempFile, pathToAccountFile);
                     sw.Close();
+                    FileInfo fInfo = new FileInfo(tempFile);
+                    fInfo.Replace(pathToAccountFile, null);
                 }
             });
         }

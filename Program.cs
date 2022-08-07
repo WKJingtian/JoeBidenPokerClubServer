@@ -10,12 +10,14 @@ namespace JoeBidenPokerClubServer
         private static bool running = true;
         static void Main(string[] args)
         {
+            //OnQuit();
             Console.Title = "Joe Biden Poker Club";
             Console.WriteLine("Welcome to Joe Biden's Poker Club!");
             Server.Start(4242);
             var am = AccountManager.Inst;
             Thread main = new Thread(new ThreadStart(MainThread));
             main.Start();
+            OnQuit();
         }
         static public void OnQuit()
         {

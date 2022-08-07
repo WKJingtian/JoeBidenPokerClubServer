@@ -1,12 +1,13 @@
 ﻿using JoeBidenPokerClubServer;
 using System.Threading;
+using System.Windows;
+using System;
 namespace JoeBidenPokerClubServer
 {
     class App
     {
         public const int s_serverFrameRate = 5;
         public const int s_msPerTick = 1000 / s_serverFrameRate;
-
         private static bool running = true;
         static void Main(string[] args)
         {
@@ -17,6 +18,8 @@ namespace JoeBidenPokerClubServer
             var am = AccountManager.Inst;
             Thread main = new Thread(new ThreadStart(MainThread));
             main.Start();
+            Console.ReadLine();
+            running = false;
             OnQuit();
         }
         static public void OnQuit()
@@ -31,8 +34,9 @@ namespace JoeBidenPokerClubServer
             DateTime loopTimer = DateTime.UtcNow;
             while(running)
             {
-                while(loopTimer < DateTime.UtcNow)
+                while(loopTimer < DateTime.UtcNow && running)
                 {
+                    Console.WriteLine("updating...");
                     RoomManager.Update();
                     ThreadManager.UpdateMain();
                     loopTimer = loopTimer.AddMilliseconds(s_msPerTick);

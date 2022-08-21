@@ -19,12 +19,16 @@ namespace JoeBidenPokerClubServer
             public int timeCard;
         }
 
-        private float pauseBetweenRounds = 3;
+        private float pauseBetweenRounds = 10;
         private float roundTime = 30;
+        public int RoundTime => (int)roundTime;
         private float timer = 0;
         private int roundNum = 0;
+        public int Round => roundNum;
         private int timeCardPerRound = 1;
+        public int Cpr => timeCardPerRound;
         private int smallBlindMoneyNum = 1;
+        public int SmallBlind => smallBlindMoneyNum;
         private int currentActivePlayer = 0;
         private int currentSmallBlind = 0;
         private bool gamePaused = true;

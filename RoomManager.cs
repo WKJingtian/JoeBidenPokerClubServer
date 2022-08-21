@@ -68,5 +68,7 @@ namespace JoeBidenPokerClubServer
             foreach (Room room in rooms)
                 room.OnGameEnd();
         }
+
+        static public List<Room>  Rooms => rooms;
     }
 }

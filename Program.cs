@@ -36,7 +36,7 @@ namespace JoeBidenPokerClubServer
             {
                 while(loopTimer < DateTime.UtcNow && running)
                 {
-                    Console.WriteLine("updating...");
+                    //Console.WriteLine("updating...");
                     RoomManager.Update();
                     ThreadManager.UpdateMain();
                     loopTimer = loopTimer.AddMilliseconds(s_msPerTick);

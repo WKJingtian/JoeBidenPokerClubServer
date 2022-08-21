@@ -176,17 +176,24 @@ namespace JoeBidenPokerClubServer
             ThreadManager.ExecuteOnMainThread(()=>
             {
                 var myUid = AccountManager.Inst.Register(clientName, password);
-                ServerSend.RpcSend(ServerPackets.registerCallback, id, (Packet p) =>
+                ServerSend.RpcSend(ServerPackets.registerCallback, id, (Packet returnP) =>
                 {
+                    if (playerAccountInfo != null)
+                    {
+                        Console.WriteLine($"client {id} trying to register when logged in");
+                        returnP.Write(false);
+                        return;
+                    }
                     if (AccountManager.Inst.GetAccount(myUid) != null)
                     {
-                        p.Write(true);
-                        p.Write(myUid);
+                        playerAccountInfo = AccountManager.Inst.GetAccount(myUid);
+                        returnP.Write(true);
+                        returnP.Write(myUid);
                     }
                     else
                     {
-                        p.Write(false);
-                        p.Write(0);
+                        returnP.Write(false);
+                        returnP.Write(0);
                     }
                 });
             });
@@ -259,12 +266,12 @@ namespace JoeBidenPokerClubServer
                 });
                 return;
             }
-            ThreadManager.ExecuteOnMainThread(() =>
+            Room r = new Room();
+            ThreadManager.ExecuteAfterFrame(() =>
             {
-                Room r = new Room();
-
                 ServerSend.RpcSend(ServerPackets.createRoomCallback, id, (Packet returnP) =>
                 {
+                    Console.WriteLine($"room no.{RoomManager.GetRoomIdx(r)} is ready");
                     returnP.Write(RoomManager.GetRoomIdx(r) != -1);
                     if (RoomManager.GetRoomIdx(r) != -1)
                         returnP.Write(RoomManager.GetRoomIdx(r));
@@ -393,19 +400,61 @@ namespace JoeBidenPokerClubServer
         }
         private void ClientRpc_sendChat(Packet p)
         {
-
+            // send chat!
         }
         private void ClientRpc_requestAccountInfo(Packet p)
         {
-
+            int pid = p.ReadInt();
+            var info = AccountManager.Inst.GetAccount(pid);
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                ServerSend.RpcSend(ServerPackets.sendAccountInfo, id, (Packet returnP) =>
+                {
+                    if (info != null)
+                    {
+                        returnP.Write(true);
+                        returnP.Write(info.name);
+                        returnP.Write(info.cash);
+                        returnP.Write(info.signiture);
+                        returnP.Write(info.gameWin);
+                        returnP.Write(info.gameLose);
+                        returnP.Write(info.cashWin);
+                        returnP.Write(info.cashLose);
+                    }
+                    else
+                    {
+                        returnP.Write(false);
+                    }
+                });
+            });
         }
         private void ClientRpc_requestRoomList(Packet p)
         {
-
+            ThreadManager.ExecuteOnMainThread(() =>
+            {
+                ServerSend.RpcSend(ServerPackets.sendRoomList, id, (Packet returnP) =>
+                {
+                    returnP.Write(RoomManager.Rooms.Count);
+                    foreach (var r in RoomManager.Rooms)
+                    {
+                        var info = r.ReportStat();
+                        returnP.Write(info.roomID);
+                        returnP.Write(info.name);
+                        returnP.Write(info.maxPlayer);
+                        returnP.Write(info.curPlayer);
+                        returnP.Write(info.maxOb);
+                        returnP.Write(info.curOb);
+                        returnP.Write(info.sb);
+                        returnP.Write(info.roundTime);
+                        returnP.Write(info.roundPerTimeCard);
+                        returnP.Write(info.roundPassed);
+                    }
+                });
+            });
         }
         private void ClientRpc_observeRoom(Packet p)
         {
-
+            // observe room!
         }
         #endregion
     }

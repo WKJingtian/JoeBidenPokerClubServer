@@ -14,6 +14,7 @@ namespace JoeBidenPokerClubServer
         List<Client> obs;
         GameFlowManager manager;
         float emptyTime = 0;
+        string roomName = "pokerRoom";
 
         public Room()
         {
@@ -31,6 +32,10 @@ namespace JoeBidenPokerClubServer
         public bool OnPlayerEnterRoom(Client c, int cashIn)
         {
             bool result = false;
+            if (cashIn < manager.SmallBlind * 30)
+            {
+                return false;
+            }
             if (c.playerAccountInfo != null &&
                 !players.Contains(c))
             {
@@ -96,6 +101,34 @@ namespace JoeBidenPokerClubServer
                     manager.HandlePacket(p, rpc);
                     break;
             }
+        }
+        public struct RoomInfo
+        {
+            public int roomID;
+            public string name;
+            public int maxPlayer;
+            public int curPlayer;
+            public int maxOb;
+            public int curOb;
+            public int sb;
+            public int roundTime;
+            public int roundPerTimeCard;
+            public int roundPassed;
+        }
+        public RoomInfo ReportStat()
+        {
+            RoomInfo result;
+            result.roomID = RoomManager.GetRoomIdx(this);
+            result.name = roomName;
+            result.maxPlayer = s_maxPlayerInRoom;
+            result.curPlayer = players.Count;
+            result.maxOb = s_maxObInRoom;
+            result.curOb = obs.Count;
+            result.sb = manager.SmallBlind;
+            result.roundTime = manager.RoundTime;
+            result.roundPerTimeCard = manager.Cpr;
+            result.roundPassed = manager.Round;
+            return result;
         }
     }
 }

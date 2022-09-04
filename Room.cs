@@ -8,8 +8,8 @@ namespace JoeBidenPokerClubServer
 {
     class Room
     {
-        static readonly int s_maxPlayerInRoom = 8;
-        static readonly int s_maxObInRoom = 4;
+        int maxPlayerInRoom = 8;
+        int maxObInRoom = 4;
         List<Client> players;
         List<Client> obs;
         GameFlowManager manager;
@@ -22,11 +22,20 @@ namespace JoeBidenPokerClubServer
             obs = new List<Client>();
             OnGameStart();
         }
+        public Room(string name, int sb, int time, int rptc, int pLimit, int oLimit)
+        {
+            players = new List<Client>();
+            obs = new List<Client>();
+            roomName = name;
+            maxPlayerInRoom = pLimit;
+            maxObInRoom = oLimit;
+            OnGameStart(sb, time, rptc, maxPlayerInRoom, maxObInRoom);
+        }
 
         public bool Joinable(bool isOb = false)
         {
-            if (isOb) return obs.Count < s_maxObInRoom;
-            else return players.Count < s_maxPlayerInRoom && manager.GetActivePlayerCount(false, false) < s_maxPlayerInRoom;
+            if (isOb) return obs.Count < maxObInRoom;
+            else return players.Count < maxPlayerInRoom && manager.GetActivePlayerCount(false, false) < maxPlayerInRoom;
         }
 
         public bool OnPlayerEnterRoom(Client c, int cashIn)
@@ -68,10 +77,10 @@ namespace JoeBidenPokerClubServer
             return false;
         }
 
-        public void OnGameStart()
+        public void OnGameStart(int sb = 1, int time = 30, int rptc = 1, int maxPlayer = 8, int maxOb = 4)
         {
             RoomManager.RegisterGameRoom(this);
-            manager = new GameFlowManager(s_maxPlayerInRoom);
+            manager = new GameFlowManager(sb, time, rptc, maxPlayer, maxOb);
         }
 
         public void OnGameEnd()
@@ -120,15 +129,19 @@ namespace JoeBidenPokerClubServer
             RoomInfo result;
             result.roomID = RoomManager.GetRoomIdx(this);
             result.name = roomName;
-            result.maxPlayer = s_maxPlayerInRoom;
+            result.maxPlayer = maxPlayerInRoom;
             result.curPlayer = players.Count;
-            result.maxOb = s_maxObInRoom;
+            result.maxOb = maxObInRoom;
             result.curOb = obs.Count;
             result.sb = manager.SmallBlind;
             result.roundTime = manager.RoundTime;
-            result.roundPerTimeCard = manager.Cpr;
+            result.roundPerTimeCard = manager.Rptc;
             result.roundPassed = manager.Round;
             return result;
+        }
+        public void ForceSync()
+        {
+            manager.ForceSync();
         }
     }
 }

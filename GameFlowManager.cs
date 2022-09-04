@@ -19,14 +19,14 @@ namespace JoeBidenPokerClubServer
             public int timeCard;
         }
 
-        private float pauseBetweenRounds = 10;
+        private float pauseBetweenRounds = 15;
         private float roundTime = 30;
         public int RoundTime => (int)roundTime;
         private float timer = 0;
         private int roundNum = 0;
         public int Round => roundNum;
-        private int timeCardPerRound = 1;
-        public int Cpr => timeCardPerRound;
+        private int roundPerTimeCard = 1;
+        public int Rptc => roundPerTimeCard;
         private int smallBlindMoneyNum = 1;
         public int SmallBlind => smallBlindMoneyNum;
         private int currentActivePlayer = 0;
@@ -47,8 +47,11 @@ namespace JoeBidenPokerClubServer
         List<PokerCard> flopTurnRiver;
         List<PlayerInGameStat> players;
 
-        public GameFlowManager(int maxPlayer)
+        public GameFlowManager(int sb, int time, int rptc, int maxPlayer, int maxOb)
         {
+            smallBlindMoneyNum = sb;
+            roundTime = time;
+            roundPerTimeCard = rptc;
             players = new List<PlayerInGameStat>();
             players.Capacity = maxPlayer;
             deck = new List<PokerCard>();
@@ -277,7 +280,7 @@ namespace JoeBidenPokerClubServer
                 player.moneyInPot = 0;
                 player.hasFolded = false;
                 player.ifAllIn = false;
-                if (roundNum % timeCardPerRound == 0) player.timeCard++;
+                if (roundNum % roundPerTimeCard == 0) player.timeCard++;
                 SyncPlayersHand(player.uid, true);
             }
             for (int i = 1; i <= 13; i++)
@@ -900,7 +903,7 @@ namespace JoeBidenPokerClubServer
                 {
                     p.Write(gamePaused ? pauseBetweenRounds - timer : roundTime - timer);
                     p.Write(roundNum);
-                    p.Write(timeCardPerRound);
+                    p.Write(roundPerTimeCard);
                     p.Write(smallBlindMoneyNum);
                     p.Write(currentActivePlayer);
                     p.Write(currentSmallBlind);
@@ -922,6 +925,11 @@ namespace JoeBidenPokerClubServer
                         }
                         p.Write(true);
                         p.Write(players[i].uid);
+                        if (AccountManager.Inst.accountInfo.ContainsKey(players[i].uid) &&
+                            AccountManager.Inst.accountInfo[players[i].uid] != null)
+                            p.Write(AccountManager.Inst.accountInfo[players[i].uid].name);
+                        else
+                            p.Write("Anonymous player");
                         p.Write(players[i].moneyInPocket);
                         p.Write(players[i].moneyInPot);
                         p.Write(players[i].hasBidThisRound);
@@ -1035,6 +1043,14 @@ namespace JoeBidenPokerClubServer
             players.Clear();
             SyncPlayers();
             SyncStat();
+        }
+        public void ForceSync()
+        {
+            SyncStat();
+            SyncPlayers();
+            SyncFlopTurnRiver();
+            foreach (var player in players)
+                SyncPlayersHand(player.uid);
         }
     }
 }

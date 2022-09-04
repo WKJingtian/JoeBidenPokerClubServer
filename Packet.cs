@@ -18,7 +18,6 @@ namespace JoeBidenPokerClubServer
         useTimeCardCallback,
         quitRoomCallback,
         syncRoomStat,
-        syncAccountStat,
         syncPlayerStat,
         syncFlopTurnRiver,
         syncPlayerHand,

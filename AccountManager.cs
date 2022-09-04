@@ -185,6 +185,7 @@ namespace JoeBidenPokerClubServer
         }
         public void Disconnect(int uid)
         {
+            Console.WriteLine($"player {accountInfo[uid].name} has loggeds out");
             ifOnline[uid] = false;
         }
         public AccountInfo GetAccount(int uid)

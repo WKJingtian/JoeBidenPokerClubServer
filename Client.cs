@@ -57,7 +57,15 @@ namespace JoeBidenPokerClubServer
         public void Disconnect()
         {
             Console.WriteLine($"{socket.Client.RemoteEndPoint} has disconnected");
-            if (playerAccountInfo != null) AccountManager.Inst.Disconnect(playerAccountInfo.uid);
+            if (playerAccountInfo != null)
+            {
+                var r = RoomManager.GetPlayerRoom(playerAccountInfo.uid);
+                if (r != null)
+                {
+                    r.OnPlayerExitRoom(this);
+                }
+                AccountManager.Inst.Disconnect(playerAccountInfo.uid);
+            }
             socket?.Close();
             stream = null;
             socket = null;
@@ -240,6 +248,14 @@ namespace JoeBidenPokerClubServer
                     if (joinSuccess)
                         returnP.Write(RoomManager.GetRoomIdx(RoomManager.GetPlayerRoom(playerAccountInfo.uid)));
                 });
+                ThreadManager.ExecuteAfterFrame(() =>
+                {
+                    var r = RoomManager.GetPlayerRoom(playerAccountInfo.uid);
+                    if (r != null)
+                    {
+                        r.ForceSync();
+                    }
+                }, 3);
             });
         }
         private void ClientRpc_createRoom(Packet p)
@@ -266,7 +282,7 @@ namespace JoeBidenPokerClubServer
                 });
                 return;
             }
-            Room r = new Room();
+            Room r = new Room(p.ReadString(), p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadInt());
             ThreadManager.ExecuteAfterFrame(() =>
             {
                 ServerSend.RpcSend(ServerPackets.createRoomCallback, id, (Packet returnP) =>
@@ -413,13 +429,16 @@ namespace JoeBidenPokerClubServer
                     if (info != null)
                     {
                         returnP.Write(true);
+                        returnP.Write(info.uid);
                         returnP.Write(info.name);
                         returnP.Write(info.cash);
-                        returnP.Write(info.signiture);
-                        returnP.Write(info.gameWin);
-                        returnP.Write(info.gameLose);
+                        returnP.Write(info.gameWin + info.gameLose == 0 ?
+                            0.0f : (float)info.gameWin / (float)(info.gameWin + info.gameLose));
                         returnP.Write(info.cashWin);
                         returnP.Write(info.cashLose);
+                        returnP.Write(info.gameWin + info.gameLose);
+                        returnP.Write(info.gameWin + info.gameLose == 0 ?
+                            0.0f : (float)info.gameWin / (float)(info.gameWin + info.gameLose));
                     }
                     else
                     {

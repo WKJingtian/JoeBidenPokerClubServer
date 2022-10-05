@@ -46,7 +46,8 @@ namespace JoeBidenPokerClubServer
                 return false;
             }
             if (c.playerAccountInfo != null &&
-                !players.Contains(c))
+                !players.Contains(c) && 
+                !manager.HasPlayer(c.id))
             {
                 result = manager.AddPlayerToGame(c.playerAccountInfo.uid, cashIn);
                 if (result)

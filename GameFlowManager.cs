@@ -166,6 +166,14 @@ namespace JoeBidenPokerClubServer
             SyncPlayers();
             return added;
         }
+
+        public bool HasPlayer(int id)
+        {
+            foreach (var p in players)
+                if (p.uid == id)
+                    return true;
+            return false;
+        }
         public void RemovePlayer(int id)
         {
             var stat = GetPlayerInfoById(id);
@@ -949,6 +957,7 @@ namespace JoeBidenPokerClubServer
                 {
                     ServerSend.RpcSend(ServerPackets.syncPlayerHand, clientRank, (Packet p) =>
                     {
+                        Console.WriteLine($"sync hand to {clientRank}");
                         p.Write(uid);
                         int i = 0;
                         foreach (var c in GetPlayerInfoById(uid).hand)
@@ -970,6 +979,7 @@ namespace JoeBidenPokerClubServer
             {
                 ServerSend.RpcSend(ServerPackets.syncPlayerHand, Server.GetClientRankByUid(uid), (Packet p) =>
                 {
+                    Console.WriteLine($"(sync only to)  sync hand to {uid}");
                     p.Write(uid);
                     int i = 0;
                     foreach (var c in GetPlayerInfoById(uid).hand)
